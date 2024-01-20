@@ -1,4 +1,4 @@
-module CATechAccelChatApp
+module github.com/hebitigo/CATechAccelChatApp
 
 go 1.21
 

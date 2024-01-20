@@ -9,7 +9,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/extra/bundebug"
 
-	"CATechAccelChatApp/entity"
+	"github.com/hebitigo/CATechAccelChatApp/entity"
 )
 
 func GetDBConnection(ctx context.Context) *bun.DB {

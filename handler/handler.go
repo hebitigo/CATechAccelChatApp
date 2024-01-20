@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"CATechAccelChatApp/entity"
-	"CATechAccelChatApp/usecase"
+	"github.com/hebitigo/CATechAccelChatApp/usecase"
+
+	"github.com/hebitigo/CATechAccelChatApp/entity"
 
 	"github.com/gin-gonic/gin"
 )

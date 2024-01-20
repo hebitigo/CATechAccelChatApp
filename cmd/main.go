@@ -1,9 +1,10 @@
 package main
 
 import (
-	"CATechAccelChatApp/repository"
-	"CATechAccelChatApp/router"
 	"context"
+
+	"github.com/hebitigo/CATechAccelChatApp/repository"
+	"github.com/hebitigo/CATechAccelChatApp/router"
 
 	_ "github.com/uptrace/bun/driver/pgdriver"
 )

@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"CATechAccelChatApp/entity"
-	"CATechAccelChatApp/repository"
+	"github.com/hebitigo/CATechAccelChatApp/entity"
+	"github.com/hebitigo/CATechAccelChatApp/repository"
 )
 
 type BotEndpointUsecaseInterface interface {

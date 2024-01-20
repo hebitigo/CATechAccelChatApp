@@ -6,9 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/uptrace/bun"
 
-	"CATechAccelChatApp/handler"
-	"CATechAccelChatApp/repository"
-	"CATechAccelChatApp/usecase"
+	"github.com/hebitigo/CATechAccelChatApp/handler"
+	"github.com/hebitigo/CATechAccelChatApp/repository"
+	"github.com/hebitigo/CATechAccelChatApp/usecase"
 )
 
 func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
