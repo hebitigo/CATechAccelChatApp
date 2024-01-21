@@ -40,7 +40,7 @@ Authorization: Bearer {jwt}
 
 [go sdk を用いた clerk の認証](https://clerk.com/docs/references/go/verifying-sessions)
 
-### POST /registerServer
+### POST /registerServer/:user_id
 
 ヘッダ
 
@@ -107,21 +107,41 @@ Authorization: Bearer {jwt}
 ```
 [
     {
-        "id": "string",
+        "channel_id": "string",
         "name": "string",
     },
     {
-        "id": "string",
+        "channel_id": "string",
         "name": "string",
 
     },
 ]
 ```
 
-### TODO:サーバーに招待する URL を発行するためのエンドポイントと処理を考える
+### POST createServerInvitation/:server_id
+
+#### 備考
+
+TODO:サーバーに招待する URL を発行するための処理を考える
+
+招待リンクの実装
+
+ハッシュ値を生成してハッシュ値と有効期限とサーバーの id を保存したデータベースを作り、ハッシュ値を共有リンクとして{アプリケーションの domain 名}/invite/{ハッシュ値}のような形で返す
+
+有効期限内かどうかを共有リンク検索欄とかから POST された共有リンクからハッシュ値を元にデータベースを検索して検証し、有効期限内ならサーバーとユーザーの関連付けをデータベースに紐づける
 
 参考になりそう
 [招待コードを知っているユーザのみ YoutubeURL を取得できる API を Go で実装してみた](https://zenn.dev/jordan/articles/db2c4fd08e7387)
+
+### POST /joinServerViaInvitation/:user_id?invite_url={url}
+
+レスポンス
+
+```
+{
+"server_id": string
+}
+```
 
 ### POST /registerBotEndpoint
 
@@ -138,7 +158,6 @@ Authorization: Bearer {jwt}
 
 ```
 {
-    "id": "string",
     "name": "string",
     "icon_url": "string",
     "endpoint": "string",
@@ -179,8 +198,25 @@ Content-Type: application/json
 
 ユーザーから websocket 経由でメッセージを受け取った際にまず
 ユーザーがメッセージを発したサーバーには登録されている bot が存在するかどうかをデータベースで検索する。
-bot からのレスポンスのメッセージがから文字じゃない場合は、
-bot の名前と共にユーザーメッセージの構造体にデータを入れて websocket 経由でサーバーのチャネルに対して メッセージを送信する。
+bot からのレスポンスのメッセージが空文字じゃない場合は、
+bot の名前と共にユーザーの構造体にメッセージのデータを入れてチャンネルに参加しているアクティブなユーザーに対してチャネルでメッセージを送信する。データベースにも登録する
+
+Message テーブルは user_id と bot_id のどちらかを NOT NULL にするためにメッセージテーブルを生やす処理を行うときは bun で
+生の SQL を書いてテーブルを登録する
+
+例
+
+```sql
+sql := `CREATE TABLE your_table (
+    column1 TYPE,
+    column2 TYPE,
+    CHECK (column1 IS NOT NULL OR column2 IS NOT NULL)
+)`
+_, err := db.Exec(context.Background(), sql)
+if err != nil {
+    // エラー処理
+}
+```
 
 ### Websocket /ws/:server_id/:channel_id/:user_id?jwt=xxxxx
 
