@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/uptrace/bun"
@@ -36,7 +37,7 @@ func GetDBConnection(ctx context.Context) *bun.DB {
 
 func DBInit(db *bun.DB, ctx context.Context) {
 	//	テーブルがない場合は作成する
-	_, err := db.NewCreateTable().Model((*entity.BotEndpoint)(nil)).IfNotExists().Exec(ctx)
+	_, err := db.NewCreateTable().Model((*entity.BotEndpoint)(nil)).Table("bot_endpoint").IfNotExists().Exec(ctx)
 	if err != nil {
 		log.Fatalf("failed to create bot_endpoint table: %v", err)
 	}
@@ -57,7 +58,9 @@ func NewBotEndpointRepository(db *bun.DB, ctx context.Context) *BotEndpointRepos
 }
 
 func (repo *BotEndpointRepository) Insert(botEndpoint *entity.BotEndpoint) error {
+	fmt.Println("inserting information:", botEndpoint)
 	_, err := repo.db.NewInsert().Model(botEndpoint).Exec(repo.ctx)
+	fmt.Println("inserted bot endpoint id: ", botEndpoint.ID)
 	if err != nil {
 		return err
 	}

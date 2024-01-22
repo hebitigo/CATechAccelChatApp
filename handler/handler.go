@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"fmt"
+
 	"github.com/hebitigo/CATechAccelChatApp/usecase"
+	validate "github.com/hebitigo/CATechAccelChatApp/util"
 
 	"github.com/hebitigo/CATechAccelChatApp/entity"
 
@@ -32,7 +35,6 @@ func NewBotEndpointHandler(usecase usecase.BotEndpointUsecaseInterface) *botEndp
 // ```
 //
 //	{
-//	   "id": "string",
 //	   "name": "string",
 //	   "icon_url": "string",
 //	   "endpoint": "string",
@@ -45,6 +47,12 @@ func (handler *botEndpointHandler) RegisterBotEndpoint(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	validator := validate.GetValidater()
+	if err := validator.Struct(botEndpoint); err != nil {
+		ctx.JSON(400, gin.H{"error": fmt.Sprintf("botEndpointParams validation failed:", err.Error())})
+		return
+	}
+
 	if err := handler.usecase.RegisterBotEndpoint(&botEndpoint); err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
