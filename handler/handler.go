@@ -2,13 +2,13 @@ package handler
 
 import (
 	"fmt"
+	"log"
+
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 
 	"github.com/hebitigo/CATechAccelChatApp/usecase"
 	validate "github.com/hebitigo/CATechAccelChatApp/util"
-
-	"github.com/hebitigo/CATechAccelChatApp/entity"
-
-	"github.com/gin-gonic/gin"
 )
 
 type botEndpointHandler struct {
@@ -41,19 +41,39 @@ func NewBotEndpointHandler(usecase usecase.BotEndpointUsecaseInterface) *botEndp
 //	}
 //
 // ```
+
+type requestRegisterBotEndpoint struct {
+	Name     string `json:"name" validate:"required"`
+	IconURL  string `json:"icon_url" validate:"required"`
+	Endpoint string `json:"endpoint" validate:"required"`
+}
+
 func (handler *botEndpointHandler) RegisterBotEndpoint(ctx *gin.Context) {
-	var botEndpoint entity.BotEndpoint
-	if err := ctx.BindJSON(&botEndpoint); err != nil {
+	var request requestRegisterBotEndpoint
+	err := ctx.BindJSON(&request)
+	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 	validator := validate.GetValidater()
-	if err := validator.Struct(botEndpoint); err != nil {
-		ctx.JSON(400, gin.H{"error": fmt.Sprintf("botEndpointParams validation failed:%s", err.Error())})
+	err = validator.Struct(request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("requestRegisterBotEndpoint validation failed. botEndpoint -> %+v", request))
+		log.Printf("%+v", err)
+		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := handler.usecase.RegisterBotEndpoint(&botEndpoint); err != nil {
+	registerBotEndpointDto := usecase.RegisterBotEndpointInputDTO{
+		Name:     request.Name,
+		IconURL:  request.IconURL,
+		Endpoint: request.Endpoint,
+	}
+
+	err = handler.usecase.RegisterBotEndpoint(registerBotEndpointDto)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("failed to register bot endpoint. botEndpoint -> %+v", request))
+		log.Printf("%+v", err)
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
@@ -79,13 +99,19 @@ type responseRegisterServer struct {
 
 func (handler *ServerHandler) RegisterServer(c *gin.Context) {
 	var request requestRegisterServer
-	if err := c.BindJSON(&request); err != nil {
+	err := c.BindJSON(&request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("failed to bind json. request -> %+v", request))
+		log.Printf("%+v", err)
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 	validator := validate.GetValidater()
-	if err := validator.Struct(request); err != nil {
-		c.JSON(400, gin.H{"error": fmt.Sprintf("request validation failed:%s", err.Error())})
+	err = validator.Struct(request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("request validation failed. request -> %+v", request))
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 	registerServerDto := usecase.RegisterServerInputDTO{
@@ -94,6 +120,7 @@ func (handler *ServerHandler) RegisterServer(c *gin.Context) {
 	}
 	serverId, err := handler.usecase.RegisterServer(c.Request.Context(), registerServerDto)
 	if err != nil {
+		log.Printf("failed to register server: %+v", err)
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
@@ -117,12 +144,14 @@ type requestRegisterUser struct {
 
 func (handler *UserHandler) RegisterUser(c *gin.Context) {
 	var request requestRegisterUser
-	if err := c.BindJSON(&request); err != nil {
+	err := c.BindJSON(&request)
+	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 	validator := validate.GetValidater()
-	if err := validator.Struct(request); err != nil {
+	err = validator.Struct(request)
+	if err != nil {
 		c.JSON(400, gin.H{"error": fmt.Sprintf("request validation failed:%s", err.Error())})
 		return
 	}
@@ -132,7 +161,8 @@ func (handler *UserHandler) RegisterUser(c *gin.Context) {
 		Active:       request.Active,
 		IconImageURL: request.IconImageURL,
 	}
-	if err := handler.usecase.RegisterUser(c.Request.Context(), registerUserInputDto); err != nil {
+	err = handler.usecase.RegisterUser(c.Request.Context(), registerUserInputDto)
+	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}

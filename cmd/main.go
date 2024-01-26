@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 
+	_ "github.com/uptrace/bun/driver/pgdriver"
+
 	"github.com/hebitigo/CATechAccelChatApp/db"
 	"github.com/hebitigo/CATechAccelChatApp/router"
-
-	_ "github.com/uptrace/bun/driver/pgdriver"
 )
 
 func main() {

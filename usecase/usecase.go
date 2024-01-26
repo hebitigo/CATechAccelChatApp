@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
 	"github.com/hebitigo/CATechAccelChatApp/entity"
 	"github.com/hebitigo/CATechAccelChatApp/repository"
 )
 
 type BotEndpointUsecaseInterface interface {
-	RegisterBotEndpoint(botEndpoint *entity.BotEndpoint) error
+	RegisterBotEndpoint(dto RegisterBotEndpointInputDTO) error
 }
 
 type BotEndpointUsecase struct {
@@ -20,10 +21,14 @@ func NewBotEndpointUsecase(repo repository.BotEndpointRespositoryInterface) *Bot
 	return &BotEndpointUsecase{repo: repo}
 }
 
-// TODO:Endpointのrequestの構造体をhandler側に記述して、それをusecase側で受け取るようにする
-// requestに対応する構造体からentity.BotEndpointに変換する処理を書く
-// 返答用の構造体もhandler側に書く
-func (usecase *BotEndpointUsecase) RegisterBotEndpoint(botEndpoint *entity.BotEndpoint) error {
+type RegisterBotEndpointInputDTO struct {
+	Name     string
+	IconURL  string
+	Endpoint string
+}
+
+func (usecase *BotEndpointUsecase) RegisterBotEndpoint(dto RegisterBotEndpointInputDTO) error {
+	botEndpoint := entity.BotEndpoint{Name: dto.Name, IconURL: dto.IconURL, Endpoint: dto.Endpoint}
 	return usecase.repo.Insert(botEndpoint)
 }
 
@@ -67,12 +72,14 @@ func (usecase *ServerUsecase) RegisterServer(ctx context.Context, dto RegisterSe
 			return err
 		}
 		userServer := entity.UserServer{UserId: dto.UserId, ServerId: serverId}
-		if err := usecase.UserServerRepo.Insert(ctx, userServer); err != nil {
+		err = usecase.UserServerRepo.Insert(ctx, userServer)
+		if err != nil {
 			return err
 		}
 
 		channel := entity.Channel{Name: "default", ServerId: serverId}
-		if err := usecase.ChannelRepo.Insert(ctx, channel); err != nil {
+		err = usecase.ChannelRepo.Insert(ctx, channel)
+		if err != nil {
 			return err
 		}
 		return nil

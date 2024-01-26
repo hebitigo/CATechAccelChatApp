@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 
@@ -26,7 +27,7 @@ func GetInsertQuery(ctx context.Context, db *bun.DB) *bun.InsertQuery {
 }
 
 type BotEndpointRespositoryInterface interface {
-	Insert(e *entity.BotEndpoint) error
+	Insert(e entity.BotEndpoint) error
 }
 
 // TODO:メソッドの引数でcontext.Contextを受け取るようにする
@@ -39,12 +40,10 @@ func NewBotEndpointRepository(db *bun.DB, ctx context.Context) *BotEndpointRepos
 	return &BotEndpointRepository{db: db, ctx: ctx}
 }
 
-func (repo *BotEndpointRepository) Insert(botEndpoint *entity.BotEndpoint) error {
-	fmt.Println("inserting information:", botEndpoint)
-	_, err := repo.db.NewInsert().Model(botEndpoint).Exec(repo.ctx)
-	fmt.Println("inserted bot endpoint id: ", botEndpoint.Id)
+func (repo *BotEndpointRepository) Insert(botEndpoint entity.BotEndpoint) error {
+	_, err := repo.db.NewInsert().Model(&botEndpoint).Exec(repo.ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("failed to insert botEndpoint. botEndpoint -> %+v:", botEndpoint))
 	}
 	return nil
 }
@@ -66,7 +65,7 @@ func (repo *ServerRepository) Insert(ctx context.Context, e entity.Server) (serv
 
 	_, err = Insert.Model(&e).Exec(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to insert server. server -> %+v:", e))
 	}
 	return e.Id, nil
 }
@@ -88,7 +87,7 @@ func (repo *UserServerRepository) Insert(ctx context.Context, e entity.UserServe
 
 	_, err := Insert.Model(&e).Exec(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("failed to insert userServer. userserver -> %+v:", e))
 	}
 	return nil
 }
@@ -110,7 +109,7 @@ func (repo *ChannelRepository) Insert(ctx context.Context, e entity.Channel) err
 
 	_, err := Insert.Model(&e).Exec(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("failed to insert channel. channel -> %+v:", e))
 	}
 	return nil
 }
@@ -132,27 +131,30 @@ func (repos TxRepository) DoInTx(ctx context.Context, f func(ctx context.Context
 
 	tx, err := repos.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("failed to begin tx. tx -> %v:", err))
 	}
 
 	ctx = context.WithValue(ctx, txKey, &tx)
 
 	t, ok := ctx.Value(txKey).(*bun.Tx)
-	fmt.Println("tx: ", t, "ok: ", ok)
+	log.Println("tx: ", t, "ok: ", ok)
 
 	defer func() {
 		if !done {
-			if err := tx.Rollback(); err != nil {
+			err = tx.Rollback()
+			if err != nil {
 				log.Printf("failed to rollback: %v", err)
 			}
 		}
 	}()
 
-	if err := f(ctx); err != nil {
-		return err
+	err = f(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to execute function in tx:")
 	}
-	if err := tx.Commit(); err != nil {
-		return err
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit tx:")
 	}
 	done = true
 	return nil
@@ -173,7 +175,7 @@ func NewUserRepository(db *bun.DB) *UserRepository {
 func (repo *UserRepository) Insert(ctx context.Context, e entity.User) error {
 	_, err := repo.db.NewInsert().Model(&e).Exec(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("failed to insert user. user -> %+v:", e))
 	}
 	return nil
 }
@@ -193,7 +195,7 @@ func NewMessageRepository(db *bun.DB) *MessageRepository {
 func (repo *MessageRepository) Insert(ctx context.Context, e entity.Message) (time.Time, error) {
 	_, err := repo.db.NewInsert().Model(&e).Exec(ctx)
 	if err != nil {
-		return time.Time{}, err
+		return time.Time{}, errors.Wrap(err, fmt.Sprintf("failed to insert message. message -> %+v:", e))
 	}
 	return e.CreatedAt, nil
 }

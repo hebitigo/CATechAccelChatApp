@@ -2,11 +2,13 @@ package ws
 
 import (
 	"context"
-	"fmt"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
+
 	"github.com/hebitigo/CATechAccelChatApp/repository"
 )
 
@@ -27,19 +29,25 @@ var upgrader = websocket.Upgrader{
 func (handler *Handler) JoinChannel(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		c.JSON(500, gin.H{"message": fmt.Sprintf("failed to upgrade http to websocket: %v", err)})
+		err := errors.Wrap(err, "failed to upgrade http to websocket")
+		log.Printf("%+v", err)
+		c.JSON(500, gin.H{"message": err.Error()})
 		return
 	}
 
 	//check uuid
 	channelId, err := uuid.Parse(c.Param("channel_Id"))
 	if err != nil {
-		c.JSON(400, gin.H{"message": fmt.Sprintf("channel_Id is not uuid: %v", err)})
+		err := errors.Wrap(err, "channel_Id is not uuid")
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"message": err.Error()})
 		return
 	}
 	serverId, err := uuid.Parse(c.Param("server_Id"))
 	if err != nil {
-		c.JSON(400, gin.H{"message": fmt.Sprintf("server_Id is not uuid: %v", err)})
+		err := errors.Wrap(err, "server_Id is not uuid")
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"message": err.Error()})
 		return
 	}
 	user := &User{

@@ -3,11 +3,14 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
+
 	"github.com/hebitigo/CATechAccelChatApp/entity"
 	"github.com/hebitigo/CATechAccelChatApp/repository"
 )
@@ -62,7 +65,8 @@ func (u *User) readPump() {
 		_, byteMessage, err := u.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error is  unexpected: %v", err)
+				err = errors.Wrap(err, fmt.Sprintf("read message from websocket is failed.err is unexpected error. byteMessage -> %+v", byteMessage))
+				log.Printf("%+v", err)
 			}
 			break
 		}
@@ -79,7 +83,7 @@ func (u *User) readPump() {
 
 		createdAt, err := u.messageRepo.Insert(u.ctx, message)
 		if err != nil {
-			log.Printf("failed to insert message: %v", err)
+			log.Printf("failed to insert message provided by websocket: %+v", err)
 			break
 		}
 
@@ -89,7 +93,8 @@ func (u *User) readPump() {
 			CreatedAt: createdAt,
 		})
 		if err != nil {
-			log.Printf("cant marshal Channel Message: %v", err)
+			err = errors.Wrap(err, fmt.Sprintf("cant marshal Channel Message. returnMessage -> %+v", returnMessage))
+			log.Printf("%v", err)
 			break
 		}
 		u.hub.broadcast <- broadcastMessage{
@@ -117,6 +122,8 @@ func (u *User) writePump() {
 			}
 			w, err := u.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				err = errors.Wrap(err, "failed to get next writer:")
+				log.Printf("%+v", err)
 				return
 			}
 			w.Write(broadcastMessage.jsonMessage)
@@ -126,12 +133,16 @@ func (u *User) writePump() {
 				broadcastMessage := <-u.send
 				w.Write(broadcastMessage.jsonMessage)
 			}
-			if w.Close() != nil {
+			err = w.Close()
+			if err != nil {
+				err = errors.Wrap(err, "failed to close writer:")
+				log.Printf("%+v", err)
 				return
 			}
 		case <-ticker.C:
 			u.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := u.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			err := u.conn.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
 				return
 			}
 		}

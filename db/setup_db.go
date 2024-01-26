@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"log"
 
-	"github.com/hebitigo/CATechAccelChatApp/entity"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/extra/bundebug"
+
+	"github.com/hebitigo/CATechAccelChatApp/entity"
 )
 
 func GetDBConnection(ctx context.Context) *bun.DB {
