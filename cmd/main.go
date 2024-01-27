@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 
-	"github.com/hebitigo/CATechAccelChatApp/repository"
-	"github.com/hebitigo/CATechAccelChatApp/router"
-
 	_ "github.com/uptrace/bun/driver/pgdriver"
+
+	"github.com/hebitigo/CATechAccelChatApp/db"
+	"github.com/hebitigo/CATechAccelChatApp/router"
 )
 
 func main() {
 
 	ctx := context.Background()
-	db := repository.GetDBConnection(ctx)
+	db := db.GetDBConnection(ctx)
 	defer db.Close()
 	r := router.InitRouter(db, ctx)
 	r.Run(":8080")
