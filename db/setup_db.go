@@ -2,11 +2,14 @@ package db
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"log"
+	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
+	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bundebug"
 
 	"github.com/hebitigo/CATechAccelChatApp/entity"
@@ -14,17 +17,27 @@ import (
 
 func GetDBConnection(ctx context.Context) *bun.DB {
 
-	dsn := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-	sqldb, err := sql.Open("pg", dsn)
-	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
-	}
+	// dsn := "postgres://postgres:postgres@ca-tech-chatapp-database.c7igw4seiyv4.ap-northeast-3.rds.amazonaws.com:5432/postgres?sslmode=disable"
+	pgconn := pgdriver.NewConnector(
+		pgdriver.WithNetwork("tcp"),
+		pgdriver.WithAddr("ca-tech-chatapp-database.c7igw4seiyv4.ap-northeast-3.rds.amazonaws.com:5432"),
+		pgdriver.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}),
+		pgdriver.WithUser("postgres"),
+		pgdriver.WithPassword("postgres"),
+		pgdriver.WithDatabase("postgres"),
+		pgdriver.WithTimeout(5*time.Second),
+		pgdriver.WithDialTimeout(5*time.Second),
+		pgdriver.WithReadTimeout(5*time.Second),
+		pgdriver.WithWriteTimeout(5*time.Second),
+	)
+	sqldb := sql.OpenDB(pgconn)
+
 	db := bun.NewDB(sqldb, pgdialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithVerbose(true),
 		bundebug.FromEnv("BUNDEBUG"),
 	))
-	err = db.Ping()
+	err := db.Ping()
 	if err != nil {
 		log.Fatalf("failed to ping database: %v", err)
 	}
