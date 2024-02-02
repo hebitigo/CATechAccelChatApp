@@ -4,9 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/caarlos0/env/v10"
+	"github.com/joho/godotenv"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -15,16 +19,40 @@ import (
 	"github.com/hebitigo/CATechAccelChatApp/entity"
 )
 
+type config struct {
+	DBUrl      string `env:"DB_URL",notEmpty`
+	DBUsername string `env:"DB_USERNAME",notEmpty`
+	DBPassword string `env:"DB_PASSWORD",notEmpty`
+	DBName     string `env:"DB_NAME",notEmpty`
+}
+
 func GetDBConnection(ctx context.Context) *bun.DB {
+	err := godotenv.Load(".env")
+	var tlsConfig *tls.Config
+	//ローカルでは.evnファイルで環境変数を設定するが、本番環境ではECSのタスク定義で環境変数を設定するので、エラーが出ても無視する
+	if err != nil {
+		log.Printf("Error loading .env file.but it's ok if you are running on production: %v", err)
+		tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	fmt.Printf("DB_URL: %v\n", os.Getenv("DB_URL"))
+
+	fmt.Printf(os.Getwd())
+	var cfg config
+	err = env.Parse(&cfg)
+	if err != nil {
+		log.Fatalf("failed to parse env: %v", err)
+	}
+	fmt.Printf("cfg: %+v\n", cfg)
 
 	// dsn := "postgres://postgres:postgres@ca-tech-chatapp-database.c7igw4seiyv4.ap-northeast-3.rds.amazonaws.com:5432/postgres?sslmode=disable"
 	pgconn := pgdriver.NewConnector(
 		pgdriver.WithNetwork("tcp"),
-		pgdriver.WithAddr("ca-tech-chatapp-database.c7igw4seiyv4.ap-northeast-3.rds.amazonaws.com:5432"),
-		pgdriver.WithTLSConfig(&tls.Config{InsecureSkipVerify: true}),
-		pgdriver.WithUser("postgres"),
-		pgdriver.WithPassword("postgres"),
-		pgdriver.WithDatabase("postgres"),
+		pgdriver.WithAddr(cfg.DBUrl),
+		pgdriver.WithTLSConfig(tlsConfig),
+		pgdriver.WithUser(cfg.DBUsername),
+		pgdriver.WithPassword(cfg.DBPassword),
+		pgdriver.WithDatabase(cfg.DBName),
 		pgdriver.WithTimeout(5*time.Second),
 		pgdriver.WithDialTimeout(5*time.Second),
 		pgdriver.WithReadTimeout(5*time.Second),
@@ -37,7 +65,7 @@ func GetDBConnection(ctx context.Context) *bun.DB {
 		bundebug.WithVerbose(true),
 		bundebug.FromEnv("BUNDEBUG"),
 	))
-	err := db.Ping()
+	err = db.Ping()
 	if err != nil {
 		log.Fatalf("failed to ping database: %v", err)
 	}
