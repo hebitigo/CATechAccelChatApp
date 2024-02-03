@@ -4,9 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"database/sql"
-	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/caarlos0/env/v10"
@@ -35,15 +33,12 @@ func GetDBConnection(ctx context.Context) *bun.DB {
 		tlsConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	fmt.Printf("DB_URL: %v\n", os.Getenv("DB_URL"))
-
-	fmt.Printf(os.Getwd())
 	var cfg config
 	err = env.Parse(&cfg)
 	if err != nil {
 		log.Fatalf("failed to parse env: %v", err)
 	}
-	fmt.Printf("cfg: %+v\n", cfg)
+	log.Printf("cfg: %+v\n", cfg)
 
 	// dsn := "postgres://postgres:postgres@ca-tech-chatapp-database.c7igw4seiyv4.ap-northeast-3.rds.amazonaws.com:5432/postgres?sslmode=disable"
 	pgconn := pgdriver.NewConnector(
