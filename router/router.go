@@ -26,7 +26,7 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:3000"}
 	r.Use(cors.New(config))
-	r.POST("/registerBotEndpoint", botEndpointHandler.RegisterBotEndpoint)
+	r.POST("/bot_endpoint", botEndpointHandler.RegisterBotEndpoint)
 
 	serverRepository := repository.NewServerRepository(db)
 	channelRepository := repository.NewChannelRepository(db)
@@ -34,20 +34,20 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	txRepository := repository.NewTxRepository(db)
 	serverUsecase := usecase.NewServerUsecase(serverRepository, channelRepository, userServerRepository, txRepository)
 	serverHandler := handler.NewServerHandler(serverUsecase)
-	r.POST("/registerServer", serverHandler.RegisterServer)
+	r.POST("/server", serverHandler.RegisterServer)
 
-	r.GET("/getServers/:user_Id", serverHandler.GetServersByUserID)
+	r.GET("/servers/:user_Id", serverHandler.GetServersByUserID)
 
 	userRepostiory := repository.NewUserRepository(db)
 	userUsecase := usecase.NewUserUsecase(userRepostiory)
 	userHandler := handler.NewUserHandler(userUsecase)
-	r.POST("/upsertUser", userHandler.UpsertUser)
+	r.POST("/user/upsert", userHandler.UpsertUser)
 
 	hub := ws.NewHub()
 	go hub.Run()
 	messageRepository := repository.NewMessageRepository(db)
 	wsHandler := ws.NewHandler(hub, messageRepository)
-	r.GET("/ws/joinChannel/:server_Id/:channel_Id/:user_Id", wsHandler.JoinChannel)
+	r.GET("/ws/channel/join/:server_Id/:channel_Id/:user_Id", wsHandler.JoinChannel)
 
 	return r
 }
