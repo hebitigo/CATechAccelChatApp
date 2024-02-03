@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/uptrace/bun"
 
@@ -22,6 +23,9 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	r := gin.Default()
 	//TODO:https://github.com/code-kakitai/code-kakitai/blob/main/app/presentation/settings/gin.go#L10
 	//を参考にして*gin.Engineにcorsの設定を追加する
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"http://localhost:3000"}
+	r.Use(cors.New(config))
 	r.POST("/registerBotEndpoint", botEndpointHandler.RegisterBotEndpoint)
 
 	serverRepository := repository.NewServerRepository(db)
@@ -32,10 +36,12 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	serverHandler := handler.NewServerHandler(serverUsecase)
 	r.POST("/registerServer", serverHandler.RegisterServer)
 
+	r.GET("/getServers/:user_Id", serverHandler.GetServersByUserID)
+
 	userRepostiory := repository.NewUserRepository(db)
 	userUsecase := usecase.NewUserUsecase(userRepostiory)
 	userHandler := handler.NewUserHandler(userUsecase)
-	r.POST("/registerUser", userHandler.RegisterUser)
+	r.POST("/upsertUser", userHandler.UpsertUser)
 
 	hub := ws.NewHub()
 	go hub.Run()

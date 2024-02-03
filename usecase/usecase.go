@@ -44,6 +44,7 @@ func RegisterUser() {
 
 type ServerUsecaseInterface interface {
 	RegisterServer(ctx context.Context, dto RegisterServerInputDTO) (string, error)
+	GetServersByUserID(ctx context.Context, dto GetServersByUserIDInputDTO) ([]entity.Server, error)
 }
 
 type ServerUsecase struct {
@@ -91,7 +92,19 @@ func (usecase *ServerUsecase) RegisterServer(ctx context.Context, dto RegisterSe
 	return serverId.String(), nil
 }
 
-type RegisterUserInputDTO struct {
+type GetServersByUserIDInputDTO struct {
+	UserId string
+}
+
+func (usecase *ServerUsecase) GetServersByUserID(ctx context.Context, dto GetServersByUserIDInputDTO) ([]entity.Server, error) {
+	servers, err := usecase.serverRepo.GetServersByUserID(ctx, dto.UserId)
+	if err != nil {
+		return nil, err
+	}
+	return servers, nil
+}
+
+type UpsertUserInputDTO struct {
 	Id           string
 	Name         string
 	Active       bool
@@ -99,7 +112,7 @@ type RegisterUserInputDTO struct {
 }
 
 type UserUsecaseInterface interface {
-	RegisterUser(ctx context.Context, dto RegisterUserInputDTO) error
+	UpsertUser(ctx context.Context, dto UpsertUserInputDTO) error
 }
 
 type UserUsecase struct {
@@ -110,9 +123,9 @@ func NewUserUsecase(userRepo repository.UserRepositoryInterface) *UserUsecase {
 	return &UserUsecase{userRepo: userRepo}
 }
 
-func (usecase *UserUsecase) RegisterUser(ctx context.Context, dto RegisterUserInputDTO) error {
+func (usecase *UserUsecase) UpsertUser(ctx context.Context, dto UpsertUserInputDTO) error {
 	user := entity.User{Id: dto.Id, Name: dto.Name, Active: dto.Active, IconImageURL: dto.IconImageURL}
-	err := usecase.userRepo.Insert(ctx, user)
+	err := usecase.userRepo.Upsert(ctx, user)
 	if err != nil {
 		return err
 	}

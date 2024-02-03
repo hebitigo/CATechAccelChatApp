@@ -93,10 +93,6 @@ type requestRegisterServer struct {
 	Name   string `json:"name" validate:"required"`
 }
 
-type responseRegisterServer struct {
-	ServerId string `json:"server_id"`
-}
-
 func (handler *ServerHandler) RegisterServer(c *gin.Context) {
 	var request requestRegisterServer
 	err := c.BindJSON(&request)
@@ -124,7 +120,43 @@ func (handler *ServerHandler) RegisterServer(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, responseRegisterServer{ServerId: serverId})
+	c.JSON(200, gin.H{"message": "server registered successfully", "server_id": serverId})
+}
+
+type requestGetServersByUserID struct {
+	UserId string `uri:"user_Id" validate:"required"`
+}
+
+func (handler *ServerHandler) GetServersByUserID(c *gin.Context) {
+	//https://gin-gonic.com/docs/examples/bind-uri/
+	//path pramのvalidate
+	log.Printf("path param -> %+v", c.Param("user_Id"))
+	var request requestGetServersByUserID
+	err := c.BindUri(&request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("failed to bind path param. request -> %+v", requestGetServersByUserID{}))
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	validator := validate.GetValidater()
+	err = validator.Struct(request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("request validation failed. request -> %+v", request))
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	getServersByUserIDInputDTO := usecase.GetServersByUserIDInputDTO{
+		UserId: request.UserId,
+	}
+	servers, err := handler.usecase.GetServersByUserID(c.Request.Context(), getServersByUserIDInputDTO)
+	if err != nil {
+		log.Printf("failed to get servers by user_id: %+v", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, servers)
 }
 
 type UserHandler struct {
@@ -135,15 +167,16 @@ func NewUserHandler(usecase usecase.UserUsecaseInterface) *UserHandler {
 	return &UserHandler{usecase: usecase}
 }
 
-type requestRegisterUser struct {
-	Id           string `json:"user_id" validate:"required"`
-	Name         string `json:"name" validate:"required"`
-	Active       bool   `json:"active" validate:"required"`
-	IconImageURL string `json:"icon_image_url" validate:"required"`
+type requestUpsertUser struct {
+	Id   string `json:"user_id" validate:"required"`
+	Name string `json:"name" validate:"required"`
+	//https://github.com/go-playground/validator/issues/142#issuecomment-127451987
+	Active       *bool  `json:"active" validate:"required"`
+	IconImageURL string `json:"icon_image_url"`
 }
 
-func (handler *UserHandler) RegisterUser(c *gin.Context) {
-	var request requestRegisterUser
+func (handler *UserHandler) UpsertUser(c *gin.Context) {
+	var request requestUpsertUser
 	err := c.BindJSON(&request)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -155,16 +188,16 @@ func (handler *UserHandler) RegisterUser(c *gin.Context) {
 		c.JSON(400, gin.H{"error": fmt.Sprintf("request validation failed:%s", err.Error())})
 		return
 	}
-	registerUserInputDto := usecase.RegisterUserInputDTO{
+	upsertUserInputDTO := usecase.UpsertUserInputDTO{
 		Id:           request.Id,
 		Name:         request.Name,
-		Active:       request.Active,
+		Active:       *request.Active,
 		IconImageURL: request.IconImageURL,
 	}
-	err = handler.usecase.RegisterUser(c.Request.Context(), registerUserInputDto)
+	err = handler.usecase.UpsertUser(c.Request.Context(), upsertUserInputDTO)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"message": "user registered successfully"})
+	c.JSON(200, gin.H{"message": "user upserted successfully"})
 }

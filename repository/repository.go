@@ -50,6 +50,7 @@ func (repo *BotEndpointRepository) Insert(botEndpoint entity.BotEndpoint) error 
 
 type ServerRepositoryInterface interface {
 	Insert(ctx context.Context, e entity.Server) (serverId *uuid.UUID, err error)
+	GetServersByUserID(ctx context.Context, userId string) ([]entity.Server, error)
 }
 
 type ServerRepository struct {
@@ -68,6 +69,29 @@ func (repo *ServerRepository) Insert(ctx context.Context, e entity.Server) (serv
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to insert server. server -> %+v:", e))
 	}
 	return e.Id, nil
+}
+
+func (repo *ServerRepository) GetServersByUserID(ctx context.Context, userId string) ([]entity.Server, error) {
+	var servers []entity.Server
+	var userServers []entity.UserServer
+	err := repo.db.NewSelect().Model(&userServers).Where("user_id = ?", userId).Scan(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get userServer by user_id. user_id -> %s", userId))
+	}
+	if len(userServers) == 0 {
+		return nil, nil
+	}
+
+	serverIds := make([]string, len(userServers))
+	for i, userServer := range userServers {
+		serverIds[i] = userServer.ServerId.String()
+	}
+	//https://bun.uptrace.dev/guide/query-where.html#where-in
+	err = repo.db.NewSelect().Model(&servers).Where("id IN (?)", bun.In(serverIds)).Scan(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get servers by user_id. user_id -> %s", userId))
+	}
+	return servers, nil
 }
 
 type UserServerRepositoryInterface interface {
@@ -161,7 +185,7 @@ func (repos TxRepository) DoInTx(ctx context.Context, f func(ctx context.Context
 }
 
 type UserRepositoryInterface interface {
-	Insert(ctx context.Context, e entity.User) error
+	Upsert(ctx context.Context, e entity.User) error
 }
 
 type UserRepository struct {
@@ -172,8 +196,8 @@ func NewUserRepository(db *bun.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (repo *UserRepository) Insert(ctx context.Context, e entity.User) error {
-	_, err := repo.db.NewInsert().Model(&e).Exec(ctx)
+func (repo *UserRepository) Upsert(ctx context.Context, e entity.User) error {
+	_, err := repo.db.NewInsert().Model(&e).On("CONFLICT (id) DO UPDATE").Set("name = EXCLUDED.name").Set("active = EXCLUDED.active").Set("icon_image_url = EXCLUDED.icon_image_url").Exec(ctx)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to insert user. user -> %+v:", e))
 	}
