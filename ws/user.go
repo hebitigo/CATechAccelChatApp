@@ -75,7 +75,7 @@ func (u *User) readPump() {
 
 		message := entity.Message{
 			UserId:        u.UserID,
-			ChannelId:     &u.ChannelID,
+			ChannelId:     u.ChannelID,
 			IsBot:         false,
 			Message:       stringMessage,
 			BotEndpointId: nil,

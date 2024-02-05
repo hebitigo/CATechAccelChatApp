@@ -14,18 +14,18 @@ import (
 )
 
 func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
-
-	//TODO:https://github.com/code-kakitai/code-kakitai/blob/main/app/server/route/route.go#L79
-	//を参考にして、handler毎に分けてrouteを初期化する
-	botEndpointRepository := repository.NewBotEndpointRepository(db, ctx)
-	botEndpointUsecase := usecase.NewBotEndpointUsecase(botEndpointRepository)
-	botEndpointHandler := handler.NewBotEndpointHandler(botEndpointUsecase)
 	r := gin.Default()
 	//TODO:https://github.com/code-kakitai/code-kakitai/blob/main/app/presentation/settings/gin.go#L10
 	//を参考にして*gin.Engineにcorsの設定を追加する
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:3000"}
 	r.Use(cors.New(config))
+
+	//TODO:https://github.com/code-kakitai/code-kakitai/blob/main/app/server/route/route.go#L79
+	//を参考にして、handler毎に分けてrouteを初期化する
+	botEndpointRepository := repository.NewBotEndpointRepository(db, ctx)
+	botEndpointUsecase := usecase.NewBotEndpointUsecase(botEndpointRepository)
+	botEndpointHandler := handler.NewBotEndpointHandler(botEndpointUsecase)
 	r.POST("/bot_endpoint", botEndpointHandler.RegisterBotEndpoint)
 
 	serverRepository := repository.NewServerRepository(db)
@@ -35,13 +35,17 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	serverUsecase := usecase.NewServerUsecase(serverRepository, channelRepository, userServerRepository, txRepository)
 	serverHandler := handler.NewServerHandler(serverUsecase)
 	r.POST("/server", serverHandler.RegisterServer)
-
-	r.GET("/servers/:user_Id", serverHandler.GetServersByUserID)
+	r.GET("/servers/:user_id", serverHandler.GetServersByUserID)
 
 	userRepostiory := repository.NewUserRepository(db)
 	userUsecase := usecase.NewUserUsecase(userRepostiory)
 	userHandler := handler.NewUserHandler(userUsecase)
 	r.POST("/user/upsert", userHandler.UpsertUser)
+
+	channelUsecase := usecase.NewChannelUsecase(channelRepository)
+	channelHandler := handler.NewChannelHandler(channelUsecase)
+	r.POST("/channel", channelHandler.RegisterChannel)
+	r.GET("/channels/:server_id", channelHandler.GetChannelsByServerID)
 
 	hub := ws.NewHub()
 	go hub.Run()

@@ -17,14 +17,14 @@ type BotEndpoint struct {
 }
 
 type Server struct {
-	Id   *uuid.UUID `json:"server_id" bun:"id,pk,type:uuid,default:gen_random_uuid()"`
-	Name string     `json:"name" bun:"name,notnull"`
+	Id   *uuid.UUID `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
+	Name string     `bun:"name,notnull"`
 }
 
 type Channel struct {
-	Id       *uuid.UUID `json:"channel_id" bun:"id,pk,type:uuid,default:gen_random_uuid()"`
-	ServerId *uuid.UUID `json:"server_id" bun:"server_id,unique:serverIdAndChannelName,notnull,type:uuid"` //FK
-	Name     string     `json:"name" bun:"name,unique:serverIdAndChannelName,notnull"`
+	Id       *uuid.UUID `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
+	ServerId uuid.UUID  `bun:"server_id,unique:serverIdAndChannelName,notnull,type:uuid"` //FK
+	Name     string     `bun:"name,unique:serverIdAndChannelName,notnull"`
 }
 
 type User struct {
@@ -44,7 +44,7 @@ type User struct {
 // CHECK ((is_bot = true AND bot_endpoint_id IS NOT NULL) OR (is_bot = false AND user_id IS NOT NULL));`)
 type Message struct {
 	Id            *uuid.UUID `json:"message_id" bun:"id,pk,type:uuid,default:gen_random_uuid()"`
-	ChannelId     *uuid.UUID `json:"channel_id" bun:"channel_id,notnull,type:uuid"`   //FK
+	ChannelId     uuid.UUID  `json:"channel_id" bun:"channel_id,notnull,type:uuid"`   //FK
 	UserId        string     `json:"user_id" bun:"user_id"`                           //FK
 	BotEndpointId *uuid.UUID `json:"bot_endpoint_id" bun:"bot_endpoint_id,type:uuid"` //FK
 	CreatedAt     time.Time  `json:"created_at" bun:"created_at,nullzero,notnull,default:current_timestamp"`
@@ -58,8 +58,8 @@ type ServerBotEndpoint struct {
 }
 
 type UserServer struct {
-	UserId   string     `json:"user_id" bun:"user_id,pk"`               //FK
-	ServerId *uuid.UUID `json:"server_id" bun:"server_id,pk,type:uuid"` //FK
+	UserId   string    `json:"user_id" bun:"user_id,pk"`               //FK
+	ServerId uuid.UUID `json:"server_id" bun:"server_id,pk,type:uuid"` //FK
 }
 
 type UserReaction struct {
