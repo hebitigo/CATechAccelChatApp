@@ -178,7 +178,7 @@ type RegisterServerInputDTO struct {
 }
 
 func (usecase *ServerUsecase) RegisterServer(ctx context.Context, dto RegisterServerInputDTO) (string, error) {
-	var serverId *uuid.UUID
+	var serverId uuid.UUID
 	var err error
 	err = usecase.txRepo.DoInTx(ctx, func(ctx context.Context) error {
 		server := entity.Server{Name: dto.ServerName}
@@ -192,8 +192,9 @@ func (usecase *ServerUsecase) RegisterServer(ctx context.Context, dto RegisterSe
 			return err
 		}
 
-		channel := entity.Channel{Name: "default", ServerId: serverId}
-		err = usecase.channelRepo.Insert(ctx, channel)
+		channel := entity.Channel{Name: "general", ServerId: serverId}
+		_, err = usecase.channelRepo.Insert(ctx, channel)
+
 		if err != nil {
 			return err
 		}
@@ -244,4 +245,47 @@ func (usecase *UserUsecase) UpsertUser(ctx context.Context, dto UpsertUserInputD
 		return err
 	}
 	return nil
+}
+
+type ChannelUsecaseInterface interface {
+	GetChannelsByServerID(ctx context.Context, dto GetChannelsByServerIDInputDTO) ([]entity.Channel, error)
+	RegisterChannel(ctx context.Context, dto RegisterChannelInputDTO) (string, error)
+}
+
+type ChannelUsecase struct {
+	channelRepo repository.ChannelRepositoryInterface
+}
+
+func NewChannelUsecase(channelRepo repository.ChannelRepositoryInterface) *ChannelUsecase {
+	return &ChannelUsecase{channelRepo: channelRepo}
+}
+
+// UserId以外のIdを元にデータを取得する際は、entityのIdの型を参考にしてInputDTOのIdの型を決める
+// serverIdはentityではServer構造体のIdの型は*uuid.UUIDだけど、これはデータベース側にuuidを自動生成させる
+// ためにポインタを使ってServer構造体のIdの値をnilにできるようにしているだけで、実際にIdをもとに検索を書ける場合は
+// Idの値がnilになることはないので、InputDTOのServerIdの型はuuid.UUIDになる
+type GetChannelsByServerIDInputDTO struct {
+	ServerId uuid.UUID
+}
+
+func (usecase *ChannelUsecase) GetChannelsByServerID(ctx context.Context, dto GetChannelsByServerIDInputDTO) ([]entity.Channel, error) {
+	channels, err := usecase.channelRepo.GetChannelsByServerID(ctx, dto.ServerId)
+	if err != nil {
+		return nil, err
+	}
+	return channels, nil
+}
+
+type RegisterChannelInputDTO struct {
+	ServerId    uuid.UUID
+	ChannelName string
+}
+
+func (usecase *ChannelUsecase) RegisterChannel(ctx context.Context, dto RegisterChannelInputDTO) (string, error) {
+	channel := entity.Channel{Name: dto.ChannelName, ServerId: dto.ServerId}
+	channelId, err := usecase.channelRepo.Insert(ctx, channel)
+	if err != nil {
+		return "", err
+	}
+	return channelId.String(), nil
 }

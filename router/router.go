@@ -44,6 +44,11 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	userHandler := handler.NewUserHandler(userUsecase)
 	r.POST("/user/upsert", userHandler.UpsertUser)
 
+	channelUsecase := usecase.NewChannelUsecase(channelRepository)
+	channelHandler := handler.NewChannelHandler(channelUsecase)
+	r.POST("/channel", channelHandler.RegisterChannel)
+	r.GET("/channels/:server_id", channelHandler.GetChannelsByServerID)
+
 	hub := ws.NewHub()
 	go hub.Run()
 	messageRepository := repository.NewMessageRepository(db)

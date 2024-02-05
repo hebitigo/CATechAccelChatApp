@@ -49,7 +49,7 @@ func (repo *BotEndpointRepository) Insert(botEndpoint entity.BotEndpoint) error 
 }
 
 type ServerRepositoryInterface interface {
-	Insert(ctx context.Context, e entity.Server) (serverId *uuid.UUID, err error)
+	Insert(ctx context.Context, e entity.Server) (serverId uuid.UUID, err error)
 	GetServersByUserID(ctx context.Context, userId string) ([]entity.Server, error)
 	GetServer(ctx context.Context, serverId string) (entity.Server, error)
 }
@@ -62,14 +62,14 @@ func NewServerRepository(db *bun.DB) *ServerRepository {
 	return &ServerRepository{db: db}
 }
 
-func (repo *ServerRepository) Insert(ctx context.Context, e entity.Server) (serverId *uuid.UUID, err error) {
+func (repo *ServerRepository) Insert(ctx context.Context, e entity.Server) (serverId uuid.UUID, err error) {
 	Insert := GetInsertQuery(ctx, repo.db)
 
 	_, err = Insert.Model(&e).Exec(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to insert server. server -> %+v:", e))
+		return uuid.Nil, errors.Wrap(err, fmt.Sprintf("failed to insert server. server -> %+v:", e))
 	}
-	return e.Id, nil
+	return *e.Id, nil
 }
 
 func (repo *ServerRepository) GetServersByUserID(ctx context.Context, userId string) ([]entity.Server, error) {
@@ -127,7 +127,8 @@ func (repo *UserServerRepository) Insert(ctx context.Context, e entity.UserServe
 }
 
 type ChannelRepositoryInterface interface {
-	Insert(ctx context.Context, e entity.Channel) error
+	Insert(ctx context.Context, e entity.Channel) (channelId uuid.UUID, err error)
+	GetChannelsByServerID(ctx context.Context, serverId uuid.UUID) ([]entity.Channel, error)
 }
 
 type ChannelRepository struct {
@@ -138,14 +139,23 @@ func NewChannelRepository(db *bun.DB) *ChannelRepository {
 	return &ChannelRepository{db: db}
 }
 
-func (repo *ChannelRepository) Insert(ctx context.Context, e entity.Channel) error {
+func (repo *ChannelRepository) Insert(ctx context.Context, e entity.Channel) (channelId uuid.UUID, err error) {
 	Insert := GetInsertQuery(ctx, repo.db)
 
-	_, err := Insert.Model(&e).Exec(ctx)
+	_, err = Insert.Model(&e).Exec(ctx)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to insert channel. channel -> %+v:", e))
+		return uuid.Nil, errors.Wrap(err, fmt.Sprintf("failed to insert channel. channel -> %+v:", e))
 	}
-	return nil
+	return *e.Id, nil
+}
+
+func (repo *ChannelRepository) GetChannelsByServerID(ctx context.Context, serverId uuid.UUID) ([]entity.Channel, error) {
+	var channels []entity.Channel
+	err := repo.db.NewSelect().Model(&channels).Where("server_id = ?", serverId).Scan(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get channels by server_id. server_id -> %s", serverId))
+	}
+	return channels, nil
 }
 
 type TxRepositoryInterface interface {

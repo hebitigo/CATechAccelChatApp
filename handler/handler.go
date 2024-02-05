@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/hebitigo/CATechAccelChatApp/usecase"
@@ -93,6 +94,11 @@ type requestRegisterServer struct {
 	Name   string `json:"name" validate:"required"`
 }
 
+type responseRegisterServer struct {
+	ServerID string `json:"server_id"`
+	Name     string `json:"name"`
+}
+
 func (handler *ServerHandler) RegisterServer(c *gin.Context) {
 	var request requestRegisterServer
 	err := c.BindJSON(&request)
@@ -120,11 +126,21 @@ func (handler *ServerHandler) RegisterServer(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"message": "server registered successfully", "server_id": serverId})
+	response := responseRegisterServer{
+		ServerID: serverId,
+		Name:     request.Name,
+	}
+
+	c.JSON(200, response)
 }
 
 type requestGetServersByUserID struct {
-	UserId string `uri:"user_Id" validate:"required"`
+	UserId string `uri:"user_id" validate:"required"`
+}
+
+type responseGetServersByUserID struct {
+	ServerID string `json:"server_id"`
+	Name     string `json:"name"`
 }
 
 func (handler *ServerHandler) GetServersByUserID(c *gin.Context) {
@@ -156,7 +172,14 @@ func (handler *ServerHandler) GetServersByUserID(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, servers)
+	var response []responseGetServersByUserID
+	for _, server := range servers {
+		response = append(response, responseGetServersByUserID{
+			ServerID: server.Id.String(),
+			Name:     server.Name,
+		})
+	}
+	c.JSON(200, response)
 }
 
 type requestCreateInvitationByJWT struct {
@@ -288,4 +311,104 @@ func (handler *UserHandler) UpsertUser(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "user upserted successfully"})
+}
+
+type ChannelHandler struct {
+	usecase usecase.ChannelUsecaseInterface
+}
+
+func NewChannelHandler(usecase usecase.ChannelUsecaseInterface) *ChannelHandler {
+	return &ChannelHandler{usecase: usecase}
+}
+
+type requestRegisterChannel struct {
+	ServerId string `json:"server_id" validate:"required,uuid"`
+	Name     string `json:"name" validate:"required"`
+}
+
+type responseRegisterChannel struct {
+	ChannelID string `json:"channel_id"`
+	Name      string `json:"name"`
+}
+
+func (handler *ChannelHandler) RegisterChannel(c *gin.Context) {
+	var request requestRegisterChannel
+	err := c.BindJSON(&request)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	validator := validate.GetValidater()
+	err = validator.Struct(request)
+	if err != nil {
+		c.JSON(400, gin.H{"error": fmt.Sprintf("request validation failed:%s", err.Error())})
+		return
+	}
+	//uuidに変換する処理
+	serverId, err := uuid.Parse(request.ServerId)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	registerChannelInputDTO := usecase.RegisterChannelInputDTO{
+		ServerId:    serverId,
+		ChannelName: request.Name,
+	}
+	channelId, err := handler.usecase.RegisterChannel(c.Request.Context(), registerChannelInputDTO)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	response := responseRegisterChannel{
+		ChannelID: channelId,
+		Name:      request.Name,
+	}
+	c.JSON(200, response)
+}
+
+type requestGetChannelsByServerID struct {
+	ServerId string `uri:"server_id" validate:"required,uuid"`
+}
+
+type responseGetChannelsByServerID struct {
+	ChannelID string `json:"channel_id"`
+	Name      string `json:"name"`
+}
+
+func (handler *ChannelHandler) GetChannelsByServerID(c *gin.Context) {
+	var request requestGetChannelsByServerID
+	err := c.BindUri(&request)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	log.Printf("request -> %+v", request)
+	validator := validate.GetValidater()
+	err = validator.Struct(request)
+	if err != nil {
+		c.JSON(400, gin.H{"error": fmt.Sprintf("request validation failed:%s", err.Error())})
+		return
+	}
+	serverId, err := uuid.Parse(request.ServerId)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	getChannelsByServerIDInputDTO := usecase.GetChannelsByServerIDInputDTO{
+		ServerId: serverId,
+	}
+	channels, err := handler.usecase.GetChannelsByServerID(c.Request.Context(), getChannelsByServerIDInputDTO)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	var response []responseGetChannelsByServerID
+	for _, channel := range channels {
+		response = append(response, responseGetChannelsByServerID{
+			ChannelID: channel.Id.String(),
+			Name:      channel.Name,
+		})
+	}
+	c.JSON(200, response)
 }
