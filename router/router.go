@@ -38,7 +38,7 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	r.POST("/server", serverHandler.RegisterServer)
 	r.POST("/server/create/invitation", serverHandler.CreateInvitationByJWT)
 	r.POST("/server/join", serverHandler.JoinServerByInvitation)
-	r.GET("/servers/:user_Id", serverHandler.GetServersByUserID)
+	r.GET("/servers/:user_id", serverHandler.GetServersByUserID)
 
 	userUsecase := usecase.NewUserUsecase(userRepostiory)
 	userHandler := handler.NewUserHandler(userUsecase)
@@ -53,7 +53,7 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	go hub.Run()
 	messageRepository := repository.NewMessageRepository(db)
 	wsHandler := ws.NewHandler(hub, messageRepository)
-	r.GET("/ws/channel/join/:server_Id/:channel_Id/:user_Id", wsHandler.JoinChannel)
+	r.GET("/ws/channel/join/:server_id/:channel_id/:user_id", wsHandler.JoinChannel)
 
 	return r
 }

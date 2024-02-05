@@ -36,16 +36,16 @@ func (handler *Handler) JoinChannel(c *gin.Context) {
 	}
 
 	//check uuid
-	channelId, err := uuid.Parse(c.Param("channel_Id"))
+	channelId, err := uuid.Parse(c.Param("channel_id"))
 	if err != nil {
-		err := errors.Wrap(err, "channel_Id is not uuid")
+		err := errors.Wrap(err, "channel_id is not uuid")
 		log.Printf("%+v", err)
 		c.JSON(400, gin.H{"message": err.Error()})
 		return
 	}
-	serverId, err := uuid.Parse(c.Param("server_Id"))
+	serverId, err := uuid.Parse(c.Param("server_id"))
 	if err != nil {
-		err := errors.Wrap(err, "server_Id is not uuid")
+		err := errors.Wrap(err, "server_id is not uuid")
 		log.Printf("%+v", err)
 		c.JSON(400, gin.H{"message": err.Error()})
 		return
@@ -53,7 +53,7 @@ func (handler *Handler) JoinChannel(c *gin.Context) {
 	user := &User{
 		ChannelID:   channelId,
 		ServerID:    serverId,
-		UserID:      c.Param("user_Id"),
+		UserID:      c.Param("user_id"),
 		hub:         handler.hub,
 		conn:        conn,
 		send:        make(chan broadcastMessage, 256),

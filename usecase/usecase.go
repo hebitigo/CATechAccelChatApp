@@ -160,7 +160,7 @@ func (usecase *ServerUsecase) AuthAndAddUser(ctx context.Context, dto AuthAndAdd
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse serverId")
 	}
-	userServer := entity.UserServer{UserId: dto.UserId, ServerId: &serverUUID}
+	userServer := entity.UserServer{UserId: dto.UserId, ServerId: serverUUID}
 	err = usecase.userServerRepo.Insert(ctx, userServer)
 	if err != nil {
 		return nil, err
