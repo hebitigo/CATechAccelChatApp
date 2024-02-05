@@ -51,6 +51,7 @@ func (repo *BotEndpointRepository) Insert(botEndpoint entity.BotEndpoint) error 
 type ServerRepositoryInterface interface {
 	Insert(ctx context.Context, e entity.Server) (serverId *uuid.UUID, err error)
 	GetServersByUserID(ctx context.Context, userId string) ([]entity.Server, error)
+	GetServer(ctx context.Context, serverId string) (entity.Server, error)
 }
 
 type ServerRepository struct {
@@ -92,6 +93,15 @@ func (repo *ServerRepository) GetServersByUserID(ctx context.Context, userId str
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to get servers by user_id. user_id -> %s", userId))
 	}
 	return servers, nil
+}
+
+func (repo *ServerRepository) GetServer(ctx context.Context, serverId string) (entity.Server, error) {
+	var server entity.Server
+	err := repo.db.NewSelect().Model(&server).Where("id = ?", serverId).Scan(ctx)
+	if err != nil {
+		return entity.Server{}, errors.Wrap(err, fmt.Sprintf("failed to get server by id. server_id -> %s", serverId))
+	}
+	return server, nil
 }
 
 type UserServerRepositoryInterface interface {
@@ -186,6 +196,7 @@ func (repos TxRepository) DoInTx(ctx context.Context, f func(ctx context.Context
 
 type UserRepositoryInterface interface {
 	Upsert(ctx context.Context, e entity.User) error
+	CheckUserExist(ctx context.Context, userId string) error
 }
 
 type UserRepository struct {
@@ -200,6 +211,15 @@ func (repo *UserRepository) Upsert(ctx context.Context, e entity.User) error {
 	_, err := repo.db.NewInsert().Model(&e).On("CONFLICT (id) DO UPDATE").Set("name = EXCLUDED.name").Set("active = EXCLUDED.active").Set("icon_image_url = EXCLUDED.icon_image_url").Exec(ctx)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to insert user. user -> %+v:", e))
+	}
+	return nil
+}
+
+func (repo *UserRepository) CheckUserExist(ctx context.Context, userId string) error {
+	var user entity.User
+	err := repo.db.NewSelect().Model(&user).Where("id = ?", userId).Scan(ctx)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to get user by id. user_id -> %s", userId))
 	}
 	return nil
 }

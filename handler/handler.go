@@ -48,11 +48,11 @@ type requestRegisterBotEndpoint struct {
 	Endpoint string `json:"endpoint" validate:"required"`
 }
 
-func (handler *botEndpointHandler) RegisterBotEndpoint(ctx *gin.Context) {
+func (handler *botEndpointHandler) RegisterBotEndpoint(c *gin.Context) {
 	var request requestRegisterBotEndpoint
-	err := ctx.BindJSON(&request)
+	err := c.BindJSON(&request)
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 	validator := validate.GetValidater()
@@ -60,7 +60,7 @@ func (handler *botEndpointHandler) RegisterBotEndpoint(ctx *gin.Context) {
 	if err != nil {
 		err := errors.Wrap(err, fmt.Sprintf("requestRegisterBotEndpoint validation failed. botEndpoint -> %+v", request))
 		log.Printf("%+v", err)
-		ctx.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -74,10 +74,10 @@ func (handler *botEndpointHandler) RegisterBotEndpoint(ctx *gin.Context) {
 	if err != nil {
 		err := errors.Wrap(err, fmt.Sprintf("failed to register bot endpoint. botEndpoint -> %+v", request))
 		log.Printf("%+v", err)
-		ctx.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(200, gin.H{"message": "bot endpoint registered successfully"})
+	c.JSON(200, gin.H{"message": "bot endpoint registered successfully"})
 }
 
 type ServerHandler struct {
@@ -134,7 +134,7 @@ func (handler *ServerHandler) GetServersByUserID(c *gin.Context) {
 	var request requestGetServersByUserID
 	err := c.BindUri(&request)
 	if err != nil {
-		err := errors.Wrap(err, fmt.Sprintf("failed to bind path param. request -> %+v", requestGetServersByUserID{}))
+		err := errors.Wrap(err, fmt.Sprintf("failed to bind path param. request -> %+v", request))
 		log.Printf("%+v", err)
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -157,6 +157,94 @@ func (handler *ServerHandler) GetServersByUserID(c *gin.Context) {
 		return
 	}
 	c.JSON(200, servers)
+}
+
+type requestCreateInvitationByJWT struct {
+	UserId   string `json:"user_id" validate:"required"`
+	ServerId string `json:"server_id" validate:"required,uuid"`
+}
+
+type responseCreateInvitationByJWT struct {
+	Token []byte `json:"token"` //jwt
+}
+
+func (handler *ServerHandler) CreateInvitationByJWT(c *gin.Context) {
+	//https://gin-gonic.com/docs/examples/bind-uri/
+	//path pramのvalidate
+	var request requestCreateInvitationByJWT
+	err := c.BindJSON(&request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("failed to bind path param. request -> %+v", request))
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	validator := validate.GetValidater()
+	err = validator.Struct(request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("request validation failed. request -> %+v", request))
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	createInvitationByJWTDTO := usecase.CreateInvitationByJWTInputDTO{
+		UserId:   request.UserId,
+		ServerId: request.ServerId,
+	}
+	signed, err := handler.usecase.CreateInvitationByJWT(createInvitationByJWTDTO)
+	if err != nil {
+		log.Printf("failed to get servers by user_id: %+v", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	response := responseCreateInvitationByJWT{
+		Token: signed,
+	}
+	c.JSON(200, response)
+}
+
+type requestJoinServerByInvitation struct {
+	Token  []byte `json:"token" validate:"required"` //jwt
+	UserId string `json:"user_id" validate:"required"`
+}
+
+type responseJoinServerByInvitation struct {
+	ServerID string `json:"server_id"`
+	Name     string `json:"name"`
+}
+
+func (handler *ServerHandler) JoinServerByInvitation(c *gin.Context) {
+	var request requestJoinServerByInvitation
+	err := c.BindJSON(&request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("failed to bind json. request -> %+v", request))
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	validator := validate.GetValidater()
+	err = validator.Struct(request)
+	if err != nil {
+		err := errors.Wrap(err, fmt.Sprintf("request validation failed. request -> %+v", request))
+		log.Printf("%+v", err)
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	authAndAddUserInputDTO := usecase.AuthAndAddUserInputDTO{
+		Token:  request.Token,
+		UserId: request.UserId,
+	}
+	server, err := handler.usecase.AuthAndAddUser(c.Request.Context(), authAndAddUserInputDTO)
+	if err != nil {
+		log.Printf("failed to auth and add user: %+v", err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	response := responseJoinServerByInvitation{
+		ServerID: server.Id.String(),
+		Name:     server.Name,
+	}
+	c.JSON(200, response)
 }
 
 type UserHandler struct {
