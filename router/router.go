@@ -32,12 +32,14 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	channelRepository := repository.NewChannelRepository(db)
 	userServerRepository := repository.NewUserServerRepository(db)
 	txRepository := repository.NewTxRepository(db)
-	serverUsecase := usecase.NewServerUsecase(serverRepository, channelRepository, userServerRepository, txRepository)
+	userRepostiory := repository.NewUserRepository(db)
+	serverUsecase := usecase.NewServerUsecase(serverRepository, channelRepository, userServerRepository, txRepository, userRepostiory)
 	serverHandler := handler.NewServerHandler(serverUsecase)
 	r.POST("/server", serverHandler.RegisterServer)
+	r.POST("/server/create/invitation", serverHandler.CreateInvitationByJWT)
+	r.POST("/server/join", serverHandler.JoinServerByInvitation)
 	r.GET("/servers/:user_id", serverHandler.GetServersByUserID)
 
-	userRepostiory := repository.NewUserRepository(db)
 	userUsecase := usecase.NewUserUsecase(userRepostiory)
 	userHandler := handler.NewUserHandler(userUsecase)
 	r.POST("/user/upsert", userHandler.UpsertUser)
@@ -51,7 +53,7 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	go hub.Run()
 	messageRepository := repository.NewMessageRepository(db)
 	wsHandler := ws.NewHandler(hub, messageRepository)
-	r.GET("/ws/channel/join/:server_Id/:channel_Id/:user_Id", wsHandler.JoinChannel)
+	r.GET("/ws/channel/join/:server_id/:channel_id/:user_id", wsHandler.JoinChannel)
 
 	return r
 }
