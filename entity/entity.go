@@ -73,3 +73,10 @@ type ReactionType struct {
 	Id    string `json:"reaction_type_id" bun:"id,pk,type:uuid,default:gen_random_uuid()"`
 	Emoji string `json:"emoji" bun:"emoji,notnull"`
 }
+
+// MessageWithUserはmessageテーブルとusersテーブルをJOINしてメッセージを取得する際に使用する
+type MessageWithUser struct {
+	Message
+	UserName string `bun:"user_name"`
+	IconURL  string `bun:"user_icon_image_url"`
+}

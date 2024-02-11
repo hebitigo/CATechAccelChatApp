@@ -206,6 +206,7 @@ func (repos TxRepository) DoInTx(ctx context.Context, f func(ctx context.Context
 
 type UserRepositoryInterface interface {
 	Upsert(ctx context.Context, e entity.User) error
+	GetUser(ctx context.Context, userId string) (entity.User, error)
 	CheckUserExist(ctx context.Context, userId string) error
 }
 
@@ -215,6 +216,15 @@ type UserRepository struct {
 
 func NewUserRepository(db *bun.DB) *UserRepository {
 	return &UserRepository{db: db}
+}
+
+func (repo *UserRepository) GetUser(ctx context.Context, userId string) (entity.User, error) {
+	var user entity.User
+	err := repo.db.NewSelect().Model(&user).Where("id = ?", userId).Scan(ctx)
+	if err != nil {
+		return entity.User{}, errors.Wrap(err, fmt.Sprintf("failed to get user by id. user_id -> %s", userId))
+	}
+	return user, nil
 }
 
 func (repo *UserRepository) Upsert(ctx context.Context, e entity.User) error {
@@ -236,6 +246,7 @@ func (repo *UserRepository) CheckUserExist(ctx context.Context, userId string) e
 
 type MessageRepositoryInterface interface {
 	Insert(ctx context.Context, e entity.Message) (time.Time, error)
+	GetMessagesWithUser(ctx context.Context, channelId uuid.UUID) ([]entity.MessageWithUser, error)
 }
 
 type MessageRepository struct {
@@ -252,4 +263,14 @@ func (repo *MessageRepository) Insert(ctx context.Context, e entity.Message) (ti
 		return time.Time{}, errors.Wrap(err, fmt.Sprintf("failed to insert message. message -> %+v:", e))
 	}
 	return e.CreatedAt, nil
+}
+
+func (repo *MessageRepository) GetMessagesWithUser(ctx context.Context, channelId uuid.UUID) ([]entity.MessageWithUser, error) {
+	var messages []entity.MessageWithUser
+	// err := repo.db.NewSelect().Table("messages AS message").ColumnExpr("*").ColumnExpr("name as user_name,user.icon_image_url as user_icon_image_url").Join("JOIN users as user ON message.user_id = user.id").Where("message.channel_id = ?", channelId).Scan(ctx, &messages)
+	err := repo.db.NewSelect().TableExpr("messages AS message").ColumnExpr("message.*").ColumnExpr("u.name as user_name,u.icon_image_url as user_icon_image_url").Join("INNER JOIN users AS u ON message.user_id = u.id").Where("message.channel_id = ?", channelId).Scan(ctx, &messages)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get messages by channel_id. channel_id -> %s", channelId))
+	}
+	return messages, nil
 }

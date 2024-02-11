@@ -52,8 +52,12 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	hub := ws.NewHub()
 	go hub.Run()
 	messageRepository := repository.NewMessageRepository(db)
-	wsHandler := ws.NewHandler(hub, messageRepository)
-	r.GET("/ws/channel/join/:server_id/:channel_id/:user_id", wsHandler.JoinChannel)
+	wsHandler := ws.NewHandler(hub, messageRepository, userRepostiory)
+	r.GET("/ws/:user_id", wsHandler.JoinChannel)
+
+	messageUseCase := usecase.NewMessageUsecase(messageRepository)
+	messageHandler := handler.NewMessageHandler(messageUseCase)
+	r.GET("/messages/:channel_id", messageHandler.GetMessagesByChannelID)
 
 	return r
 }
