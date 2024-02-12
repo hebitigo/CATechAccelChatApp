@@ -289,3 +289,27 @@ func (usecase *ChannelUsecase) RegisterChannel(ctx context.Context, dto Register
 	}
 	return channelId.String(), nil
 }
+
+type MessageUsecaseInterface interface {
+	GetMessagesByChannelID(ctx context.Context, dto GetMessagesByChannelIDInputDTO) ([]entity.MessageWithUser, error)
+}
+
+type MessageUsecase struct {
+	messageRepo repository.MessageRepositoryInterface
+}
+
+func NewMessageUsecase(messageRepo repository.MessageRepositoryInterface) *MessageUsecase {
+	return &MessageUsecase{messageRepo: messageRepo}
+}
+
+type GetMessagesByChannelIDInputDTO struct {
+	ChannelId uuid.UUID
+}
+
+func (usecase *MessageUsecase) GetMessagesByChannelID(ctx context.Context, dto GetMessagesByChannelIDInputDTO) ([]entity.MessageWithUser, error) {
+	messages, err := usecase.messageRepo.GetMessagesWithUser(ctx, dto.ChannelId)
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
+}

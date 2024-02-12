@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 
@@ -15,10 +14,11 @@ import (
 type Handler struct {
 	hub         *Hub
 	messageRepo repository.MessageRepositoryInterface
+	userRepo repository.UserRepositoryInterface
 }
 
-func NewHandler(hub *Hub, repository repository.MessageRepositoryInterface) *Handler {
-	return &Handler{hub: hub, messageRepo: repository}
+func NewHandler(hub *Hub, messageRepo repository.MessageRepositoryInterface,userRepo repository.UserRepositoryInterface) *Handler {
+	return &Handler{hub: hub, messageRepo: messageRepo,userRepo:userRepo}
 }
 
 var upgrader = websocket.Upgrader{
@@ -35,30 +35,14 @@ func (handler *Handler) JoinChannel(c *gin.Context) {
 		return
 	}
 
-	//check uuid
-	channelId, err := uuid.Parse(c.Param("channel_id"))
-	if err != nil {
-		err := errors.Wrap(err, "channel_id is not uuid")
-		log.Printf("%+v", err)
-		c.JSON(400, gin.H{"message": err.Error()})
-		return
-	}
-	serverId, err := uuid.Parse(c.Param("server_id"))
-	if err != nil {
-		err := errors.Wrap(err, "server_id is not uuid")
-		log.Printf("%+v", err)
-		c.JSON(400, gin.H{"message": err.Error()})
-		return
-	}
 	user := &User{
-		ChannelID:   channelId,
-		ServerID:    serverId,
 		UserID:      c.Param("user_id"),
 		hub:         handler.hub,
 		conn:        conn,
-		send:        make(chan broadcastMessage, 256),
+		send:        make(chan []byte, 256),
 		ctx:         context.Background(),
 		messageRepo: handler.messageRepo,
+		userRepo: handler.userRepo,
 	}
 
 	handler.hub.register <- user

@@ -3,10 +3,11 @@ package handler
 import (
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 
 	"github.com/hebitigo/CATechAccelChatApp/usecase"
 	validate "github.com/hebitigo/CATechAccelChatApp/util"
@@ -408,6 +409,67 @@ func (handler *ChannelHandler) GetChannelsByServerID(c *gin.Context) {
 		response = append(response, responseGetChannelsByServerID{
 			ChannelID: channel.Id.String(),
 			Name:      channel.Name,
+		})
+	}
+	c.JSON(200, response)
+}
+
+type MessageHandler struct {
+	usecase usecase.MessageUsecaseInterface
+}
+
+func NewMessageHandler(usecase usecase.MessageUsecaseInterface) *MessageHandler {
+	return &MessageHandler{usecase: usecase}
+}
+
+type requestGetMessagesByChannelID struct {
+	ChannelId string `uri:"channel_id" validate:"required,uuid"`
+}
+
+type responseGetMessagesByChannelID struct {
+	MessageID string    `json:"message_id"`
+	ChannelID string    `json:"channel_id"`
+	UserName  string    `json:"user_name"`
+	IconURL   string    `json:"user_icon_image_url"`
+	Message   string    `json:"message"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (handler *MessageHandler) GetMessagesByChannelID(c *gin.Context) {
+	var request requestGetMessagesByChannelID
+	err := c.BindUri(&request)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	validator := validate.GetValidater()
+	err = validator.Struct(request)
+	if err != nil {
+		c.JSON(400, gin.H{"error": fmt.Sprintf("request validation failed:%s", err.Error())})
+		return
+	}
+	channelId, err := uuid.Parse(request.ChannelId)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	getMessagesByChannelIDInputDTO := usecase.GetMessagesByChannelIDInputDTO{
+		ChannelId: channelId,
+	}
+	messages, err := handler.usecase.GetMessagesByChannelID(c.Request.Context(), getMessagesByChannelIDInputDTO)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	var response []responseGetMessagesByChannelID
+	for _, message := range messages {
+		response = append(response, responseGetMessagesByChannelID{
+			MessageID: message.Id.String(),
+			ChannelID: message.ChannelId.String(),
+			UserName:  message.UserName,
+			IconURL:   message.IconURL,
+			Message:   message.Message.Message,
+			CreatedAt: message.CreatedAt,
 		})
 	}
 	c.JSON(200, response)
