@@ -245,7 +245,7 @@ func (repo *UserRepository) CheckUserExist(ctx context.Context, userId string) e
 }
 
 type MessageRepositoryInterface interface {
-	Insert(ctx context.Context, e entity.Message) (time.Time, error)
+	Insert(ctx context.Context, e entity.Message) (time.Time, uuid.UUID, error)
 	GetMessagesWithUser(ctx context.Context, channelId uuid.UUID) ([]entity.MessageWithUser, error)
 }
 
@@ -257,12 +257,12 @@ func NewMessageRepository(db *bun.DB) *MessageRepository {
 	return &MessageRepository{db: db}
 }
 
-func (repo *MessageRepository) Insert(ctx context.Context, e entity.Message) (time.Time, error) {
+func (repo *MessageRepository) Insert(ctx context.Context, e entity.Message) (time.Time, uuid.UUID, error) {
 	_, err := repo.db.NewInsert().Model(&e).Exec(ctx)
 	if err != nil {
-		return time.Time{}, errors.Wrap(err, fmt.Sprintf("failed to insert message. message -> %+v:", e))
+		return time.Time{}, uuid.UUID{}, errors.Wrap(err, fmt.Sprintf("failed to insert message. message -> %+v:", e))
 	}
-	return e.CreatedAt, nil
+	return e.CreatedAt, *e.Id, nil
 }
 
 func (repo *MessageRepository) GetMessagesWithUser(ctx context.Context, channelId uuid.UUID) ([]entity.MessageWithUser, error) {
