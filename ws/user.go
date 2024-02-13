@@ -49,6 +49,7 @@ type incomingChatMessageInfo struct {
 }
 
 type outgoingChatMessageInfo struct {
+	MessageId        string    `json:"message_id"`
 	UserName         string    `json:"user_name"`
 	UserIconImageURL string    `json:"user_icon_image_url"`
 	ServerId         string    `json:"server_id"`
@@ -178,7 +179,7 @@ Loop:
 				Message:       chatMessageInfo.Message,
 				BotEndpointId: nil,
 			}
-			createdAt, err := u.messageRepo.Insert(u.ctx, message)
+			createdAt, messageId, err := u.messageRepo.Insert(u.ctx, message)
 			if err != nil {
 				log.Printf("failed to insert message provided by websocket: %+v", err)
 				sendWebsocketError(u.conn, err)
@@ -187,6 +188,7 @@ Loop:
 			}
 
 			returnChatMessageInfo := outgoingChatMessageInfo{
+				MessageId:        messageId.String(),
 				UserName:         user.Name,
 				UserIconImageURL: user.IconImageURL,
 				CreatedAt:        createdAt,
