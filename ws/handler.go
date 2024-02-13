@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -14,14 +15,17 @@ import (
 type Handler struct {
 	hub         *Hub
 	messageRepo repository.MessageRepositoryInterface
-	userRepo repository.UserRepositoryInterface
+	userRepo    repository.UserRepositoryInterface
 }
 
-func NewHandler(hub *Hub, messageRepo repository.MessageRepositoryInterface,userRepo repository.UserRepositoryInterface) *Handler {
-	return &Handler{hub: hub, messageRepo: messageRepo,userRepo:userRepo}
+func NewHandler(hub *Hub, messageRepo repository.MessageRepositoryInterface, userRepo repository.UserRepositoryInterface) *Handler {
+	return &Handler{hub: hub, messageRepo: messageRepo, userRepo: userRepo}
 }
 
 var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
@@ -42,7 +46,7 @@ func (handler *Handler) JoinChannel(c *gin.Context) {
 		send:        make(chan []byte, 256),
 		ctx:         context.Background(),
 		messageRepo: handler.messageRepo,
-		userRepo: handler.userRepo,
+		userRepo:    handler.userRepo,
 	}
 
 	handler.hub.register <- user
