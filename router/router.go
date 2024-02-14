@@ -18,7 +18,7 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	//TODO:https://github.com/code-kakitai/code-kakitai/blob/main/app/presentation/settings/gin.go#L10
 	//を参考にして*gin.Engineにcorsの設定を追加する
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:3000"}
+	config.AllowOrigins = []string{"http://localhost:3000", "https://ca-tech-accel-chat-app-front.vercel.app"}
 	r.Use(cors.New(config))
 	r.GET("/ping", handler.Ping)
 
