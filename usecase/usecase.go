@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -79,11 +80,12 @@ func (usecase *ServerUsecase) CreateInvitationByJWT(dto CreateInvitationByJWTInp
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build token")
 	}
-	key, err := os.ReadFile("secret.pem")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read key file")
-	}
-	secKey, err := jwk.ParseKey(key, jwk.WithPEM(true))
+	//pemファイルを生成して
+	//perl -p -e 's/\n/\\n/' secret.pem
+	//で改行をエスケープして環境変数に設定しておく
+	key := os.Getenv("PRIVATE_PEM_KEY")
+	key = strings.Replace(key, "\\n", "\n", -1)
+	secKey, err := jwk.ParseKey([]byte(key), jwk.WithPEM(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse key")
 	}
@@ -103,11 +105,16 @@ func (usecase *ServerUsecase) AuthAndAddUser(ctx context.Context, dto AuthAndAdd
 	//参考になりそう
 	//https://github.com/lestrrat-go/jwx/blob/d86010aad62ff60ad593f97f39c2ea3e8ab5691e/examples/jwt_example_test.go#L166C1-L169C73
 	//https://github.com/lestrrat-go/jwx/blob/d86010aad62ff60ad593f97f39c2ea3e8ab5691e/examples/jwt_example_test.go#L80
-	key, err := os.ReadFile("public.pem")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read key file")
-	}
-	pubKey, err := jwk.ParseKey(key, jwk.WithPEM(true))
+	// key, err := os.ReadFile("public.pem")
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to read key file")
+	// }
+	//pemファイルを生成して
+	//perl -p -e 's/\n/\\n/' secret.pem
+	//で改行をエスケープして環境変数に設定しておく
+	key := os.Getenv("PUBLIC_PEM_KEY")
+	key = strings.Replace(key, "\\n", "\n", -1)
+	pubKey, err := jwk.ParseKey([]byte(key), jwk.WithPEM(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse key")
 	}
