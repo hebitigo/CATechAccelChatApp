@@ -30,7 +30,6 @@ func GetDBConnection(ctx context.Context) *bun.DB {
 	//ローカルでは.evnファイルで環境変数を設定するが、本番環境ではECSのタスク定義で環境変数を設定するので、エラーが出ても無視する
 	if err != nil {
 		log.Printf("Error loading .env file.but it's ok if you are running on production: %v", err)
-		tlsConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	var cfg config
@@ -39,6 +38,13 @@ func GetDBConnection(ctx context.Context) *bun.DB {
 		log.Fatalf("failed to parse env: %v", err)
 	}
 	log.Printf("cfg: %+v\n", cfg)
+
+	if cfg.DBUrl != "localhost:5432" {
+		log.Printf("DBURl is not localhost:5432, so set InsecureSkipVerify to true")
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
 
 	// dsn := "postgres://postgres:postgres@ca-tech-chatapp-database.c7igw4seiyv4.ap-northeast-3.rds.amazonaws.com:5432/postgres?sslmode=disable"
 	pgconn := pgdriver.NewConnector(

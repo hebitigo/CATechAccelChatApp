@@ -20,6 +20,7 @@ func InitRouter(db *bun.DB, ctx context.Context) *gin.Engine {
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:3000"}
 	r.Use(cors.New(config))
+	r.GET("/ping", handler.Ping)
 
 	//TODO:https://github.com/code-kakitai/code-kakitai/blob/main/app/server/route/route.go#L79
 	//を参考にして、handler毎に分けてrouteを初期化する

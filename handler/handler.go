@@ -474,3 +474,7 @@ func (handler *MessageHandler) GetMessagesByChannelID(c *gin.Context) {
 	}
 	c.JSON(200, response)
 }
+
+func Ping(c *gin.Context) {
+	c.JSON(200, gin.H{"message": "pong"})
+}
